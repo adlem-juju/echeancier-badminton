@@ -1,0 +1,95 @@
+DIRECTIVE DE GÉNÉRATION DE CODE : APPLICATION "BADM-OPTIMIZER"
+Génère une application Web moderne, interactive et esthétique, permettant de planifier et d'optimiser des championnats de badminton. L'architecture de l'application doit être flexible : bien qu'un fichier HTML unique (Single-Page Application autonome) soit une option appréciée, la contrainte de structure monopage n'est pas obligatoire. Le code peut être structuré de manière modulaire afin de faciliter la maintenance et les évolutions futures.
+1. STACK TECHNIQUE ET LIBRARIES REQUISES
+    • Design & UI : Tailwind CSS (chargé via CDN), FontAwesome ou Lucide Icons (SVGs inline préférés).
+    • Parsing & Export de fichiers : Bibliothèque SheetJS (xlsx.full.min.js via CDN : https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js) pour lire les fichiers Excel importés et pour exporter l'échéancier et les résultats.
+    • Évolutivité (MCP) : L'architecture du code doit être pensée pour permettre dans un second temps d'appeler un protocole MCP (Model Context Protocol). Les requêtes d'optimisation lourdes ou la gestion persistante des données devront pouvoir être déléguées à des serveurs ou services externes compatibles MCP via des API découplées.
+2. MODULE 1 : IMPORT EXCEL ET DÉCOUPAGE DYNAMIQUE DES SÉRIES
+A. Format attendu du fichier Excel importé
+L'utilisateur doit pouvoir glisser-déposer ou charger un fichier .xlsx ou .csv contenant une liste de joueurs avec les colonnes suivantes :
+    • Nom (Texte)
+    • Sexe (M / F)
+    • Points ou CPPH (Nombre entier)
+B. Algorithme de séparation et de partitionnement
+    1. Séparation de genre : Diviser immédiatement le fichier en deux listes étanches : Simple Homme (SH) et Simple Dame (SD).
+    2. Tri initial et complétion des données : Trier chaque liste par ordre décroissant de Points.
+        ◦ Règle de gestion des données manquantes : Si le nombre de points d'un joueur est vide, invalide ou manquant dans le fichier importé, le système doit appeler une fonction dédiée à l'estimation ou au calcul de ce score. En l'attente de la spécification finale de cette fonction, celle-ci devra temporairement renvoyer une valeur par défaut de 400 points.
+        ◦ Une fois les scores complétés, le classement et le rang des joueurs (du plus fort au moins fort) sont établis.
+    3. Algorithme de partitionnement mathématique (Cœur de l'application) : Pour une liste de joueurs, l'application doit diviser l'effectif en plusieurs séries de niveau. Chaque série doit obligatoirement adopter l'un de ces trois formats privilégiés :
+        ◦ Tableau de 8 joueurs (T8) : 2 poules de 4 Demis croisées Finale.
+        ◦ Poule Unique de 6 joueurs (PU6) : Formule championnat (5 tours).
+        ◦ Poule Unique de 5 joueurs (PU5) : Formule championnat (5 tours, 1 exempt par tour).
+    4. Résolution des cas par programmation linéaire / gloutonne : L'algorithme doit trouver la combinaison d'entiers minimisant le reste (joueurs exclus) tel que :
+        ◦ Règle de priorité 1 : Minimiser à tout prix (0 joueur retiré si ).
+        ◦ Règle de priorité 2 : Si plusieurs combinaisons donnent le même , maximiser les Tableaux de 8 (), puis les Poules de 6 ().
+        ◦ Règle de repli () :
+            ▪ Si : Faire 1 PU6 ().
+            ▪ Si : Faire 1 T8 ().
+            ▪ Si : Signaler l'impossibilité de créer une série ou proposer de fusionner avec le genre opposé (si autorisé).
+C. Interface utilisateur du Module 1
+    • Zone de drag & drop pour le fichier Excel.
+    • Tableau de prévisualisation des données importées (mettant en évidence les points calculés par défaut à 400).
+    • Affichage clair du découpage proposé : "Série 1 (T8, Joueurs 1 à 8)", "Série 2 (PU6, Joueurs 9 à 14)", etc., avec identification visuelle des joueurs exclus () s'il y en a.
+3. MODULE 2 : MOTEUR DE GÉNÉRATION D'ÉCHÉANCIER ET EXPORT
+A. Paramètres de configuration (Champs de saisie interactifs)
+L'utilisateur doit pouvoir ajuster en direct les variables suivantes :
+    • Heure de début des matchs (Saisie de l'heure, par exemple 08:00) : Cette heure servira de point de départ chronologique pour le tout premier match du tournoi et calculera les créneaux des rotations suivantes.
+    • Nombre de terrains disponibles (Exemple : 8)
+    • Durée moyenne d'un match (D) en minutes (Exemple : 27)
+    • Temps d'échauffement (E) en minutes (Exemple : 3) -> Le créneau total d'un match est de .
+    • Temps de repos minimal (R) en minutes pour un joueur (Exemple : 20).
+    • Évolution - Gestion dynamique des terrains : Prévoir dès à présent dans le code et dans l'interface utilisateur (sous forme de champs désactivés ou d'inputs d'attente étiquetés "Évolution future") des paramètres permettant de réduire le nombre de terrains disponibles sur plusieurs tours (ex: "Passer de 8 à 6 terrains à partir du Tour 3").
+B. Moteur d'ordonnancement (Scheduler) et Visualisation
+Le système doit générer un tableau d'échéancier divisé en Rotations temporelles (R1, R2, R3...).
+    1. Visualisation Interactive : L'échéancier doit être affiché sous forme de grille interactive (les colonnes représentent les Terrains, les lignes représentent les plages horaires de chaque rotation). Chaque cellule affiche les joueurs concernés, leur série et le statut du match.
+    2. Génération des matchs théoriques :
+        ◦ Chaque match de poule doit suivre l'ordre réglementaire de la FFBaD (ex: 1vs3, puis 2vs3, puis 1vs2 pour une poule de 3).
+        ◦ La structure temporelle d'un tournoi complet de format T8, PU6 ou PU5 s'étend naturellement sur 9 rotations théoriques si les joueurs alternent (1 match joué 1 match de repos).
+    3. Moteur de contraintes physiques : Pour chaque match à placer à la Rotation , l'algorithme doit vérifier :
+        ◦ Pas de double appel : Aucun des deux joueurs ne doit être déjà programmé sur un autre terrain durant cette même rotation.
+        ◦ Respect du temps de repos : Si un joueur a joué à la Rotation (se terminant à ), il ne peut rejouer à la rotation (commençant à ) que si :
+        ◦ Goulot d'étranglement des phases finales (T8) : Les demi-finales d'un Tableau de 8 ne peuvent être jouées que si TOUS les matchs de poules de ce tableau sont terminés. Idem pour la finale par rapport aux demis.
+C. Module d'exportation XLS/Excel
+L'application doit intégrer un bouton d'exportation de l'échéancier actif au format .xls/.xlsx via la librairie SheetJS. Le classeur Excel généré doit comporter plusieurs onglets formatés :
+    • Onglet 1 - "Échéancier" : Un tableau reprenant la structure de la grille temporelle (Lignes = Heures de rotations, Colonnes = Courts de 1 à X) avec le détail des matchs programmés dans chaque case.
+    • Onglet 2 - "Séries & Groupes" : La liste des séries créées avec la composition détaillée de chaque poule.
+    • Onglet 3 - "Registre Joueurs" : La liste de tous les participants triés, avec leurs points (y compris la mention de calcul automatique à 400 points).
+4. MODULE 3 : CONSOLE D'OPTIMISATION ET CONSULTATION DES SCÉNARIOS
+C'est la fonctionnalité clé : éviter les "trous" (terrains vides) à la fin du tournoi, regrouper les finales et permettre l'arbitrage humain entre les différents plannings.
+A. La Contrainte "Finales Synchronisées"
+L'application doit implémenter un algorithme d'optimisation rétrograde (qui planifie à rebours) pour faire en sorte que :
+    • Toutes les finales de tous les tableaux et poules uniques se jouent lors de la toute dernière rotation (Rotation Finale ).
+    • Si un tableau n'a pas de finale (comme les Poules uniques PU5 ou PU6), son dernier match de championnat (le choc décisif) soit programmé sur cette même Rotation .
+B. Heuristique d'Ajustement des Séries (Bascule et recalcul)
+Si le moteur d'ordonnancement détecte qu'il est impossible de synchroniser les finales sans laisser de trop grands vides, il doit tester automatiquement des configurations alternatives :
+    1. Scénario de test 1 : Modification des partitions (Sans exclusion) :
+        ◦ Remplacer par exemple un double tableau de 8 par un arrangement de poules uniques .
+    2. Scénario de test 2 : Heuristique de retrait () :
+        ◦ Retirer 1 ou 2 joueurs du tournoi (passage en liste d'attente) pour débloquer une combinaison d'échéancier extrêmement dense et fluide.
+C. Interface de Consultation et Comparaison des Scénarios
+La Console d'Optimisation doit proposer un espace de consultation dynamique :
+    • Sélecteur de scénario : L'utilisateur doit pouvoir basculer en un clic entre :
+        ◦ Scénario A : Initial / Standard (Découpage mathématique optimal par défaut).
+        ◦ Scénario B : Partition alternative (Modifications des formats sans exclusion de joueurs).
+        ◦ Scénario C : Optimisé avec exclusion (Retrait du minimum de joueurs pour maximiser l'occupation des terrains et synchroniser les finales).
+    • Affichage de la grille de l'échéancier sélectionné : L'échéancier complet du scénario actif doit se mettre à jour visuellement dans l'interface pour permettre à l'utilisateur de l'inspecter avant validation.
+    • Panneau de comparaison des indicateurs clés (Metrics Dashboard) :
+        ◦ Taux d'occupation global des terrains (ex: 82% vs 94%).
+        ◦ Heure de fin estimée de la dernière finale.
+        ◦ Nombre de terrains vides cumulés.
+        ◦ Nombre de joueurs exclus (mis en liste d'attente).
+    • Un bouton "Appliquer ce scénario" valide définitivement l'échéancier choisi comme l'échéancier actif du tournoi.
+5. PERSISTANCE LOCALE ET SAUVEGARDE
+Pour parer à toute coupure ou rafraîchissement intempestif de la page, l'application doit exploiter le stockage local du navigateur (localStorage) :
+    • Sauvegarde Automatique : Chaque action structurante (importation de la liste de joueurs, modification des paramètres horaires ou de terrains, saisie d'un score de match, génération d'un nouveau scénario d'échéancier) doit être immédiatement sérialisée en JSON et stockée localement.
+    • Restauration au démarrage : Lors du chargement de la page, l'application vérifie la présence d'une sauvegarde existante dans le localStorage. Si elle existe, l'interface se recharge fidèlement dans l'état exact où l'utilisateur l'avait laissée (avec les joueurs, les paramètres d'échéancier choisis et les résultats de l'optimisation).
+    • Bouton de réinitialisation complète : Un bouton d'action permet de purger le stockage local pour démarrer un tout nouveau tournoi à blanc.
+6. DESIGN & UI ATTENDUS
+L'application doit être conçue comme un outil SaaS moderne :
+    • Mode Sombre / Lumineux élégant, palette axée sur le sport (Bleu nuit, vert émeraude pour les indicateurs "OK").
+    • Trois onglets principaux :
+        1. Dashboard Import & Séries : Gestion des fichiers, gestion des points de repli (fonction à 400 points) et des combinaisons de tableaux.
+        2. Planificateur d'Échéancier : Vue tabulaire interactive avec les terrains en colonnes, les rotations en lignes (calculées à partir de l'heure de début choisie), bouton d'export XLS, affichage du taux de vacance des terrains et de l'indicateur de réduction de terrains.
+        3. Console d'Optimisation : Interface affichant les résultats des scénarios de test (A, B et C) avec module de consultation graphique de chaque échéancier, tableau de bord comparatif des indicateurs et bouton d'application finale.
+    • Composants interactifs : Les matchs de l'échéancier doivent être cliquables pour voir le détail des joueurs, simuler un score, ou déplacer manuellement un match si nécessaire (drag & drop intra-rotation).
+

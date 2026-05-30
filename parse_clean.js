@@ -1,0 +1,11 @@
+const XLSX = require('/tmp/badm-parse/node_modules/xlsx');
+const wb = XLSX.readFile('data/joueurs_49232.xlsx');
+const sn = wb.SheetNames[0];
+const data = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: "" });
+const keys = Object.keys(data[0]);
+console.log("Found " + keys.length + " columns in first row.");
+console.log("--- Keys ---");
+console.log(keys);
+console.log("--- First row values ---");
+const row1 = data[0];
+keys.forEach(k => console.log(k, ":", row1[k]));

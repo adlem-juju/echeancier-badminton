@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BADM-Optimizer — Planificateur de Championnat de Badminton</title>
+  <meta name="description"
+    content="Application de planification et d'optimisation d'échéanciers pour championnats de badminton.">
+
+  <!-- Tailwind CSS v3 CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#edfcf5',
+              100: '#d3f8e6',
+              200: '#aaf0d1',
+              300: '#73e2b5',
+              400: '#3bcd95',
+              500: '#17b37b',
+              600: '#0b9163',
+              700: '#097452',
+              800: '#0b5c42',
+              900: '#0a4b37',
+              950: '#042a20',
+            },
+            navy: {
+              700: '#1a2744',
+              800: '#131d35',
+              900: '#0d1526',
+              950: '#080e1a',
+            },
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- SheetJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Custom styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body
+  class="bg-gray-50 dark:bg-navy-950 text-gray-900 dark:text-gray-100 font-sans min-h-screen transition-colors duration-300">
+
+  <!-- ══════════════════ TOP NAVBAR ══════════════════ -->
+  <nav id="navbar"
+    class="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-navy-900/80 border-b border-gray-200 dark:border-navy-700 shadow-sm">
+    <div class="max-w-[1600px] mx-auto flex items-center justify-between px-4 h-14">
+      <!-- Logo -->
+      <div class="flex items-center gap-3">
+        <div
+          class="w-8 h-8 bg-gradient-to-br from-brand-400 to-brand-600 rounded-lg flex items-center justify-center shadow-lg shadow-brand-500/20">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <h1 class="text-lg font-bold tracking-tight">
+          <span class="bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent">BADM</span><span
+            class="text-gray-400 dark:text-gray-500">-</span>Optimizer
+        </h1>
+      </div>
+
+      <!-- Tab Buttons -->
+      <div id="tab-buttons" class="flex items-center bg-gray-100 dark:bg-navy-800 rounded-xl p-1 gap-0.5">
+        <button data-tab="import"
+          class="tab-btn active px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200">
+          <svg class="w-4 h-4 inline-block mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          Import & Séries
+        </button>
+        <button data-tab="scheduler"
+          class="tab-btn px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200">
+          <svg class="w-4 h-4 inline-block mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          Planificateur
+        </button>
+        <button data-tab="optimizer"
+          class="tab-btn px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200">
+          <svg class="w-4 h-4 inline-block mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+          </svg>
+          Optimisation
+        </button>
+      </div>
+
+      <!-- Right side: actions -->
+      <div class="flex items-center gap-2">
+        <button id="btn-theme-toggle" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-navy-700 transition-colors"
+          title="Basculer thème">
+          <svg id="icon-sun" class="w-5 h-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2">
+            <circle cx="12" cy="12" r="5" />
+            <path stroke-linecap="round"
+              d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+          </svg>
+          <svg id="icon-moon" class="w-5 h-5 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        </button>
+        <button id="btn-reset"
+          class="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors"
+          title="Réinitialiser tout">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ══════════════════ MAIN CONTENT AREA ══════════════════ -->
+  <main class="max-w-[1600px] mx-auto px-4 py-6">
+
+    <!-- ═══ TAB 1: Import & Séries ═══ -->
+    <section id="tab-import" class="tab-content">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left: File Upload & Config -->
+        <div class="lg:col-span-1 space-y-6">
+          <!-- Upload Card -->
+          <div class="card">
+            <h2 class="card-title">
+              <svg class="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Importer la liste
+            </h2>
+            <div id="drop-zone" class="drop-zone">
+              <svg class="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-3" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Glissez-déposez votre fichier <span
+                  class="font-semibold">.xlsx</span> ou <span class="font-semibold">.csv</span></p>
+              <p class="text-xs text-gray-400 dark:text-gray-500">ou cliquez pour parcourir</p>
+              <input type="file" id="file-input" accept=".xlsx,.xls,.csv" class="hidden">
+            </div>
+            <div id="file-info"
+              class="hidden mt-3 p-3 bg-brand-50 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-800 rounded-lg">
+              <div class="flex items-center gap-2 text-sm">
+                <svg class="w-4 h-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                  stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span id="file-name" class="font-medium text-brand-700 dark:text-brand-400"></span>
+              </div>
+              <p id="file-stats" class="text-xs text-gray-500 mt-1"></p>
+            </div>
+          </div>
+
+          <!-- Summary Card -->
+          <div id="partition-summary" class="card hidden">
+            <h2 class="card-title">
+              <svg class="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Résumé des Séries
+            </h2>
+            <div id="partition-summary-content"></div>
+          </div>
+        </div>
+
+        <!-- Right: Data Preview -->
+        <div id="categories-container" class="lg:col-span-2 space-y-6">
+          <!-- Dynamic categories will be rendered here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ TAB 2: Planificateur ═══ -->
+    <section id="tab-scheduler" class="tab-content hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+        <!-- Left: Parameters -->
+        <div class="lg:col-span-1 space-y-6">
+          <div class="card">
+            <h2 class="card-title">
+              <svg class="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              Paramètres
+            </h2>
+            <div class="space-y-4">
+              <div>
+                <label class="label">Heure de début</label>
+                <input type="time" id="param-start-time" value="08:00" class="input-field">
+              </div>
+              <div>
+                <label class="label">Nombre de terrains</label>
+                <input type="number" id="param-courts" value="8" min="1" max="20" class="input-field">
+              </div>
+              <div>
+                <label class="label">Durée d'un match (min)</label>
+                <input type="number" id="param-match-duration" value="27" min="10" max="60" class="input-field">
+              </div>
+              <div>
+                <label class="label">Échauffement (min)</label>
+                <input type="number" id="param-warmup" value="3" min="0" max="15" class="input-field">
+              </div>
+              <div>
+                <label class="label">Repos minimum (min)</label>
+                <input type="number" id="param-rest" value="20" min="5" max="60" class="input-field">
+              </div>
+
+              <!-- Sélecteur dynamique des catégories à planifier -->
+              <div class="pt-2">
+                <label class="label flex items-center justify-between mb-2">
+                  Tableaux à inclure
+                  <span class="text-xs font-normal text-gray-400 cursor-pointer hover:text-brand-500 transition-colors"
+                    id="btn-toggle-all-cats">Tout cocher</span>
+                </label>
+                <div id="category-selector-container"
+                  class="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar border border-gray-100 dark:border-navy-700/50 rounded-lg p-2 bg-gray-50/50 dark:bg-navy-900/30">
+                  <p class="text-xs text-gray-400 italic text-center py-2">Importez d'abord des joueurs</p>
+                </div>
+              </div>
+
+              <hr class="border-gray-200 dark:border-navy-700">
+
+              <!-- Future evolution: dynamic courts -->
+              <div class="opacity-50 pointer-events-none">
+                <label class="label flex items-center gap-2">
+                  Réduction terrains
+                  <span
+                    class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 font-semibold">Évolution
+                    future</span>
+                </label>
+                <input type="number" id="param-courts-reduce" placeholder="Ex: 6" class="input-field" disabled>
+                <label class="label mt-2">À partir de la rotation</label>
+                <input type="number" id="param-courts-reduce-from" placeholder="Ex: 3" class="input-field" disabled>
+              </div>
+            </div>
+          </div>
+
+          <button id="btn-generate-schedule" class="w-full btn-primary">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Générer l'échéancier
+          </button>
+
+          <button id="btn-export-xlsx" class="w-full btn-secondary hidden">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Exporter en Excel
+          </button>
+        </div>
+
+        <!-- Right: Schedule Grid -->
+        <div class="lg:col-span-3">
+          <div class="card">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="card-title mb-0">
+                <svg class="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                  stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                Grille d'Échéancier
+              </h2>
+              <div id="schedule-stats" class="flex items-center gap-4 text-sm hidden">
+                <span class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-brand-500"></span> Taux d'occupation :
+                  <span id="stat-occupancy" class="font-bold text-brand-500">—</span>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Fin estimée :
+                  <span id="stat-end-time" class="font-bold">—</span>
+                </span>
+              </div>
+            </div>
+            <div id="schedule-grid-container" class="overflow-x-auto">
+              <div id="schedule-placeholder" class="text-center py-20 text-gray-400 dark:text-gray-600">
+                <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                  stroke-width="1">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p class="text-lg font-medium">Aucun échéancier généré</p>
+                <p class="text-sm mt-1">Importez des joueurs et configurez les paramètres, puis cliquez sur "Générer".
+                </p>
+              </div>
+              <div id="schedule-grid" class="hidden"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ TAB 3: Optimisation ═══ -->
+    <section id="tab-optimizer" class="tab-content hidden">
+      <div class="space-y-6">
+
+        <!-- Scenario Selector -->
+        <div class="card">
+          <h2 class="card-title">
+            <svg class="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            Console d'Optimisation
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="scenario-cards">
+            <button id="scenario-a" class="scenario-card active">
+              <div class="scenario-badge">A</div>
+              <div>
+                <h3 class="font-semibold text-sm">Standard</h3>
+                <p class="text-xs text-gray-400">Découpage mathématique optimal</p>
+              </div>
+            </button>
+            <button id="scenario-b" class="scenario-card">
+              <div class="scenario-badge">B</div>
+              <div>
+                <h3 class="font-semibold text-sm">Partition alternative</h3>
+                <p class="text-xs text-gray-400">Formats modifiés, 0 exclusion</p>
+              </div>
+            </button>
+            <button id="scenario-c" class="scenario-card">
+              <div class="scenario-badge">C</div>
+              <div>
+                <h3 class="font-semibold text-sm">Optimisé avec exclusion</h3>
+                <p class="text-xs text-gray-400">Max occupation & finales synchrones</p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Metrics Dashboard -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="metrics-dashboard">
+          <div class="metric-card">
+            <p class="metric-label">Taux d'occupation</p>
+            <p class="metric-value" id="metric-occupancy">—</p>
+          </div>
+          <div class="metric-card">
+            <p class="metric-label">Heure de fin</p>
+            <p class="metric-value" id="metric-end-time">—</p>
+          </div>
+          <div class="metric-card">
+            <p class="metric-label">Terrains vides cumulés</p>
+            <p class="metric-value" id="metric-empty-courts">—</p>
+          </div>
+          <div class="metric-card">
+            <p class="metric-label">Joueurs exclus</p>
+            <p class="metric-value" id="metric-excluded">—</p>
+          </div>
+        </div>
+
+        <!-- Scenario Schedule Preview -->
+        <div class="card">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="card-title mb-0">Échéancier du scénario actif</h2>
+            <button id="btn-apply-scenario" class="btn-primary text-sm">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              Appliquer ce scénario
+            </button>
+          </div>
+          <div id="optimizer-grid-container" class="overflow-x-auto">
+            <div id="optimizer-placeholder" class="text-center py-16 text-gray-400 dark:text-gray-600">
+              <p class="text-lg font-medium">Aucun scénario disponible</p>
+              <p class="text-sm mt-1">Générez d'abord un échéancier depuis le Planificateur.</p>
+            </div>
+            <div id="optimizer-grid" class="hidden"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2"></div>
+
+  <!-- JS Modules -->
+  <script type="module" src="js/app.js"></script>
+</body>
+
+</html>

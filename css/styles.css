@@ -1,0 +1,238 @@
+/* ══════════════════════════════════════════════════
+   BADM-Optimizer — Custom Styles
+   Complements Tailwind with specific animations,
+   component styles, and theme transitions.
+   ══════════════════════════════════════════════════ */
+
+/* ── Base ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
+}
+
+::selection {
+  background: rgba(23, 179, 123, 0.25);
+}
+
+/* ── Cards ── */
+.card {
+  @apply bg-white dark:bg-navy-800 rounded-2xl border border-gray-200 dark:border-navy-700 p-5 shadow-sm;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.card:hover {
+  @apply shadow-md;
+}
+
+.card-title {
+  @apply flex items-center gap-2 text-base font-semibold mb-4;
+}
+
+/* ── Tabs ── */
+.tab-btn {
+  @apply text-gray-500 dark:text-gray-400;
+}
+
+.tab-btn.active {
+  @apply bg-white dark:bg-navy-700 text-gray-900 dark:text-white shadow-sm;
+}
+
+.tab-btn:not(.active):hover {
+  @apply text-gray-700 dark:text-gray-200;
+}
+
+/* ── Drop Zone ── */
+.drop-zone {
+  @apply border-2 border-dashed border-gray-300 dark:border-navy-600 rounded-xl p-8 text-center cursor-pointer transition-all duration-200;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+  @apply border-brand-400 bg-brand-50/50 dark:bg-brand-950/20;
+}
+
+.drop-zone.drag-over {
+  @apply scale-[1.02];
+}
+
+/* ── Inputs ── */
+.label {
+  @apply block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider;
+}
+
+.input-field {
+  @apply w-full px-3 py-2 text-sm text-black bg-gray-50 dark:bg-gray-100 border border-gray-200 dark:border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition-all;
+}
+
+/* ── Buttons ── */
+.btn-primary {
+  @apply flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-semibold rounded-xl shadow-lg shadow-brand-500/25 transition-all duration-200 active:scale-[0.98];
+}
+
+.btn-secondary {
+  @apply flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-100 dark:bg-navy-700 hover:bg-gray-200 dark:hover:bg-navy-600 text-gray-700 dark:text-gray-200 font-semibold rounded-xl transition-all duration-200 active:scale-[0.98];
+}
+
+/* ── Scenario Cards ── */
+.scenario-card {
+  @apply flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 dark:border-navy-600 transition-all duration-200 text-left cursor-pointer;
+}
+
+.scenario-card:hover {
+  @apply border-brand-400/50;
+}
+
+.scenario-card.active {
+  @apply border-brand-500 bg-brand-50/50 dark:bg-brand-950/20 shadow-lg shadow-brand-500/10;
+}
+
+.scenario-badge {
+  @apply flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-navy-700 text-sm font-bold text-gray-600 dark:text-gray-300 flex-shrink-0;
+}
+
+.scenario-card.active .scenario-badge {
+  @apply bg-brand-500 text-white;
+}
+
+/* ── Metric Cards ── */
+.metric-card {
+  @apply p-4 bg-white dark:bg-navy-800 rounded-xl border border-gray-200 dark:border-navy-700 text-center;
+}
+
+.metric-label {
+  @apply text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium mb-1;
+}
+
+.metric-value {
+  @apply text-2xl font-bold bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent;
+}
+
+/* ── Schedule Grid ── */
+.schedule-table {
+  @apply w-full border-collapse text-sm;
+}
+
+.schedule-table th {
+  @apply px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-navy-900 border-b border-gray-200 dark:border-navy-700 sticky top-0 z-10;
+}
+
+.schedule-table td {
+  @apply px-2 py-1.5 border border-gray-100 dark:border-navy-700 align-top;
+}
+
+.schedule-table tr:hover td {
+  @apply bg-gray-50/50 dark:bg-navy-800/50;
+}
+
+/* ── Match Cell ── */
+.match-cell {
+  @apply text-xs rounded-lg p-1.5 cursor-pointer transition-all duration-150 hover:scale-[1.03] hover:shadow-md;
+  min-height: 2.5rem;
+}
+
+.match-cell.sh {
+  @apply bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300;
+}
+
+.match-cell.sd {
+  @apply bg-pink-50 dark:bg-pink-950/30 border border-pink-200 dark:border-pink-800 text-pink-700 dark:text-pink-300;
+}
+
+.match-cell.final {
+  @apply bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 ring-1 ring-amber-400/30;
+}
+
+.match-cell.empty {
+  @apply bg-gray-50 dark:bg-navy-900/50 border border-dashed border-gray-200 dark:border-navy-700 text-gray-300 dark:text-gray-600;
+}
+
+/* ── Series Tag ── */
+.series-tag {
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider;
+}
+
+.series-tag.t8 {
+  @apply bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300;
+}
+
+.series-tag.pu6 {
+  @apply bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300;
+}
+
+.series-tag.pu5 {
+  @apply bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300;
+}
+
+/* ── Player row highlight for default points ── */
+.default-points {
+  @apply text-amber-500 dark:text-amber-400 italic;
+}
+
+/* ── Toast ── */
+.toast {
+  @apply flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl text-sm font-medium max-w-sm;
+  animation: toast-in 0.3s ease-out;
+}
+
+.toast.success {
+  @apply bg-brand-600 text-white;
+}
+
+.toast.error {
+  @apply bg-red-600 text-white;
+}
+
+.toast.info {
+  @apply bg-blue-600 text-white;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(1rem) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Player Table ── */
+.player-table {
+  @apply w-full text-sm;
+}
+
+.player-table th {
+  @apply text-left text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 pb-2 border-b border-gray-100 dark:border-navy-700;
+}
+
+.player-table td {
+  @apply py-1.5 border-b border-gray-50 dark:border-navy-800;
+}
+
+.player-table tr:last-child td {
+  @apply border-b-0;
+}
+
+/* ── Excluded player ── */
+.player-excluded {
+  @apply opacity-50 line-through;
+}
+
+/* ── Pulse animation for generating ── */
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(23, 179, 123, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 20px 4px rgba(23, 179, 123, 0.15);
+  }
+}
