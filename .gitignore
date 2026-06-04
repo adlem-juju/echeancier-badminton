@@ -1,0 +1,15 @@
+# LibreOffice/Office lock files
+.~lock.*
+
+# Test/sample data (may contain personal player info)
+data/*.xlsx
+data/*.xls
+data/*.csv
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp

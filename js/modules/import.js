@@ -142,6 +142,10 @@ function parsePlayersFromArray(rows) {
             ['simple', 'simpe', 'tableau', 'série', 'serie'].includes(c)
         );
 
+        // Look for Sigle (club/dept) and Date (registration)
+        let sigleIdx = strRow.findIndex(c => c.includes('sigle') || c.includes('club'));
+        let dateIdx = strRow.findIndex(c => c.includes('date'));
+
         // If we confidently find Name and Sex on this row, it's our header
         if (nameIdx !== -1 && sexIdx !== -1) {
             headerIndex = i;
@@ -157,6 +161,8 @@ function parsePlayersFromArray(rows) {
                 );
             }
             colMap.category = categoryIdx;
+            colMap.sigle = sigleIdx;
+            colMap.date = dateIdx;
             break;
         }
     }
@@ -207,7 +213,39 @@ function parsePlayersFromArray(rows) {
         // Remove weird line breaks from category if present
         category = category.replace(/[\r\n]+/g, '').trim();
 
-        players.push({ name: fullName, sex, points, isDefault, rank: 0, category });
+        // Sigle
+        let sigle = colMap.sigle !== -1 ? String(row[colMap.sigle]).trim() : '';
+
+        // Date (DD/MM/YYYY HH:MM:SS)
+        let dateAdded = 0;
+        if (colMap.date !== -1 && row[colMap.date]) {
+            const dStr = String(row[colMap.date]).trim();
+            // Try Excel serial date
+            if (!isNaN(Number(dStr))) {
+                // Excel dates usually count days from 1900-01-01
+                dateAdded = new Date(Math.round((Number(dStr) - 25569) * 86400 * 1000)).getTime();
+            } else {
+                const match = dStr.match(/(\d+)\/(\d+)\/(\d+)(?:\s+(\d+):(\d+):(\d+))?/);
+                if (match) {
+                    const d = Number(match[1]), M = Number(match[2]), y = Number(match[3]);
+                    const h = match[4] ? Number(match[4]) : 0;
+                    const m = match[5] ? Number(match[5]) : 0;
+                    const s = match[6] ? Number(match[6]) : 0;
+                    dateAdded = new Date(y, M - 1, d, h, m, s).getTime();
+                }
+            }
+        }
+
+        players.push({
+            name: fullName,
+            sex,
+            points,
+            isDefault,
+            rank: 0,
+            category,
+            sigle,
+            dateAdded
+        });
     }
 
     return players;

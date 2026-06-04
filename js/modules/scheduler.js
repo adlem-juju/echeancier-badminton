@@ -272,6 +272,7 @@ export function buildSchedule(categories, params) {
     const slotDuration = params.matchDuration + params.warmup;
     const startMinutes = timeToMinutes(params.startTime);
     const courts = params.courts;
+    const courtReduction = params.courtReduction || null;
     const MAX_IDLE = 2;      // Max rotations gap between rounds of a series
     const MAX_RETRIES = 6;
 
@@ -331,11 +332,22 @@ export function buildSchedule(categories, params) {
         const maxRotations = 100;
 
         while (rotIdx < maxRotations) {
+            // Determine effective court count for this rotation
+            let activeCourts = courts;
+            if (courtReduction && courtReduction.reduceTo && courtReduction.reduceTo < courts) {
+                const fromIdx = (courtReduction.fromRotation || 1) - 1; // convert to 0-based
+                const untilIdx = (courtReduction.untilRotation != null) ? courtReduction.untilRotation - 1 : Infinity;
+                if (rotIdx >= fromIdx && rotIdx <= untilIdx) {
+                    activeCourts = courtReduction.reduceTo;
+                }
+            }
+
             const rotation = {
                 index: rotIdx,
                 timeStart: minutesToTime(startMinutes + rotIdx * slotDuration),
                 timeEnd: minutesToTime(startMinutes + (rotIdx + 1) * slotDuration),
                 slots: new Array(courts).fill(null),
+                activeCourts, // store for rendering
             };
             let courtIdx = 0;
             let anyPlaced = false;
@@ -375,7 +387,7 @@ export function buildSchedule(categories, params) {
 
                         if (wOk) {
                             // Place all remaining wrap matches starting at court 0
-                            const toPlaceWrap = unplacedWrap.slice(0, courts - courtIdx);
+                            const toPlaceWrap = unplacedWrap.slice(0, activeCourts - courtIdx);
                             for (const m of toPlaceWrap) {
                                 const players = [];
                                 if (m.playerA) players.push(m.playerA.name);
@@ -427,7 +439,7 @@ export function buildSchedule(categories, params) {
             }
 
             for (const disc of discOrder) {
-                if (courtIdx >= courts) break;
+                if (courtIdx >= activeCourts) break;
 
                 // Series order within discipline: wrap series first, urgent next, rest sorted
                 let sidsForDisc = Object.keys(seriesProgress)
@@ -447,7 +459,7 @@ export function buildSchedule(categories, params) {
                 }
 
                 for (const sid of sidsForDisc) {
-                    if (courtIdx >= courts) break;
+                    if (courtIdx >= activeCourts) break;
                     const sp = seriesProgress[sid];
                     if (sp.nextRound > sp.maxRound) continue;
 
@@ -476,7 +488,7 @@ export function buildSchedule(categories, params) {
                     }
 
                     const isWrapContinuation = (wrapSeriesId === sid);
-                    const available = courts - courtIdx;
+                    const available = activeCourts - courtIdx;
 
                     // Project where each unplaced match would land if we start placing from courtIdx
                     const projected = [];
@@ -484,7 +496,7 @@ export function buildSchedule(categories, params) {
                     for (let i = 0; i < unplaced.length; i++) {
                         projected.push(pRot);
                         pCourt++;
-                        if (pCourt >= courts) { pRot++; pCourt = 0; }
+                        if (pCourt >= activeCourts) { pRot++; pCourt = 0; }
                     }
 
                     // ── VERIFY ALL matches in this round against their projected rotation ────

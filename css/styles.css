@@ -110,40 +110,59 @@
 /* ── Schedule Grid ── */
 .schedule-table {
   @apply w-full border-collapse text-sm;
+  table-layout: fixed;
 }
 
 .schedule-table th {
-  @apply px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-navy-900 border-b border-gray-200 dark:border-navy-700 sticky top-0 z-10;
+  @apply px-2 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-navy-900 border-b-2 border-gray-200 dark:border-navy-700 sticky top-0 z-10;
 }
 
 .schedule-table td {
-  @apply px-2 py-1.5 border border-gray-100 dark:border-navy-700 align-top;
+  @apply px-1.5 py-1.5 border border-gray-100 dark:border-navy-800 align-middle;
+  width: auto;
 }
 
 .schedule-table tr:hover td {
-  @apply bg-gray-50/50 dark:bg-navy-800/50;
+  @apply bg-gray-50/30 dark:bg-navy-800/30;
 }
 
 /* ── Match Cell ── */
+/* Solid filled blocks – each category gets its own vibrant color via inline style */
 .match-cell {
-  @apply text-xs rounded-lg p-1.5 cursor-pointer transition-all duration-150 hover:scale-[1.03] hover:shadow-md;
-  min-height: 2.5rem;
+  @apply w-full rounded-xl cursor-pointer transition-all duration-150;
+  @apply flex flex-col justify-between;
+  height: 72px;
+  padding: 8px 10px;
+  position: relative;
+  overflow: hidden;
 }
 
-.match-cell.sh {
-  @apply bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300;
+.match-cell:hover {
+  transform: scale(1.03);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+  z-index: 5;
 }
 
-.match-cell.sd {
-  @apply bg-pink-50 dark:bg-pink-950/30 border border-pink-200 dark:border-pink-800 text-pink-700 dark:text-pink-300;
+/* Phase badge inside cell */
+.match-phase-badge {
+  @apply inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md;
+  background: rgba(255, 255, 255, 0.30);
+  backdrop-filter: blur(2px);
+  color: inherit;
 }
 
-.match-cell.final {
-  @apply bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 ring-1 ring-amber-400/30;
+.match-cell.final .match-phase-badge {
+  background: rgba(255, 255, 255, 0.45);
+  font-weight: 900;
 }
 
 .match-cell.empty {
-  @apply bg-gray-50 dark:bg-navy-900/50 border border-dashed border-gray-200 dark:border-navy-700 text-gray-300 dark:text-gray-600;
+  @apply bg-gray-50 dark:bg-navy-900/40 border border-dashed border-gray-200 dark:border-navy-700;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  @apply text-gray-300 dark:text-gray-700 text-lg;
 }
 
 /* ── Series Tag ── */

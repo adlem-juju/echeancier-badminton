@@ -33,7 +33,7 @@ const defaultState = {
   appliedScenario: null,
 
   // UI state
-  theme: 'dark',
+  theme: 'light',
   activeTab: 'import',
 };
 
