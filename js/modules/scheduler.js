@@ -50,6 +50,30 @@ const PU6_ROUNDS = [
 ];
 
 /**
+ * PU4 — 4 players, 3 rounds, 2 matches/round (same as a T8 half-pool)
+ */
+const PU4_ROUNDS = [
+    { matches: [[0, 3], [1, 2]] },
+    { matches: [[0, 2], [1, 3]] },
+    { matches: [[0, 1], [2, 3]] },
+];
+
+/**
+ * PU7 — 7 players, 7 rounds, 3 matches/round, 1 exempt/round (21 matches total)
+ * Generated via the ghost-player (Berger) method: add player 7 as bye, run 8-player
+ * round-robin, any "match vs ghost" becomes an exemption.
+ */
+const PU7_ROUNDS = [
+    { matches: [[1, 6], [2, 5], [3, 4]], exempt: 0 },
+    { matches: [[2, 0], [3, 6], [4, 5]], exempt: 1 },
+    { matches: [[3, 1], [4, 0], [5, 6]], exempt: 2 },
+    { matches: [[4, 2], [5, 1], [6, 0]], exempt: 3 },
+    { matches: [[5, 3], [6, 2], [0, 1]], exempt: 4 },
+    { matches: [[6, 4], [0, 3], [1, 2]], exempt: 5 },
+    { matches: [[0, 5], [1, 4], [2, 3]], exempt: 6 },
+];
+
+/**
  * T8 — Tableau de 8 joueurs
  * 2 poules de 4 joueurs (Poule A: p1-p4, Poule B: p5-p8)
  * Phase poules: 3 tours, chaque tour = 2 matchs par poule = 4 matchs total
@@ -81,7 +105,24 @@ export function generateSeriesMatches(series, seriesIndex, discipline) {
     const seriesId = `${discipline}_S${seriesIndex + 1}`;
     const matches = [];
 
-    if (series.type === 'PU5') {
+    if (series.type === 'PU4') {
+        PU4_ROUNDS.forEach((round, roundIdx) => {
+            round.matches.forEach(([a, b]) => {
+                matches.push({
+                    round: roundIdx,
+                    pairIndices: [a, b],
+                    phase: 'poule',
+                    seriesId,
+                    seriesType: 'PU4',
+                    discipline,
+                    playerA: series.players[a],
+                    playerB: series.players[b],
+                    matchLabel: `${series.players[a].name} vs ${series.players[b].name}`,
+                    seriesLabel: series.label,
+                });
+            });
+        });
+    } else if (series.type === 'PU5') {
         PU5_ROUNDS.forEach((round, roundIdx) => {
             round.matches.forEach(([a, b]) => {
                 matches.push({
@@ -107,6 +148,23 @@ export function generateSeriesMatches(series, seriesIndex, discipline) {
                     phase: 'poule',
                     seriesId,
                     seriesType: 'PU6',
+                    discipline,
+                    playerA: series.players[a],
+                    playerB: series.players[b],
+                    matchLabel: `${series.players[a].name} vs ${series.players[b].name}`,
+                    seriesLabel: series.label,
+                });
+            });
+        });
+    } else if (series.type === 'PU7') {
+        PU7_ROUNDS.forEach((round, roundIdx) => {
+            round.matches.forEach(([a, b]) => {
+                matches.push({
+                    round: roundIdx,
+                    pairIndices: [a, b],
+                    phase: 'poule',
+                    seriesId,
+                    seriesType: 'PU7',
                     discipline,
                     playerA: series.players[a],
                     playerB: series.players[b],
@@ -597,8 +655,8 @@ export function buildSchedule(categories, params) {
         // Validate
         const validation = validateSchedule(rotations, courts, slotDuration, params);
 
-        // Compute metrics
-        const totalSlots = rotations.length * courts;
+        // Compute metrics — use activeCourts per rotation so court reduction is accounted for
+        const totalSlots = rotations.reduce((acc, r) => acc + r.activeCourts, 0);
         const filledSlots = rotations.reduce((acc, r) => acc + r.slots.filter(Boolean).length, 0);
         const emptySlots = totalSlots - filledSlots;
         const occupancy = totalSlots > 0 ? Math.round((filledSlots / totalSlots) * 100) : 0;

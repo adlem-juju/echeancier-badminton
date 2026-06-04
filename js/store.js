@@ -19,8 +19,7 @@ const defaultState = {
     matchDuration: 27,
     warmup: 3,
     rest: 20,
-    courtsReduceTo: null,
-    courtsReduceFromRotation: null,
+    courtReduction: null, // { reduceTo, fromRotation, untilRotation } or null
   },
 
   // Generated schedules

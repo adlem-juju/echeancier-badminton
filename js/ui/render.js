@@ -644,81 +644,6 @@ function updateCategoryConfig(catName, configChanges, triggerRender = true) {
     }
 }
 
-function renderPartitionDetails(partition, discipline) {
-    let html = '';
-
-    partition.series.forEach(s => {
-        const tagClass = s.type === 'T8' ? 't8' : s.type === 'PU6' ? 'pu6' : 'pu5';
-        const desc = s.type === 'T8' ? '2 poules de 4 → Demis → Finale' :
-            s.type === 'PU6' ? 'Poule unique — 5 tours (15 matchs)' :
-                'Poule unique — 5 tours, 1 exempt (10 matchs)';
-
-        html += `
-      <div class="mb-4 p-3 rounded-xl bg-gray-50 dark:bg-navy-900/50 border border-gray-100 dark:border-navy-700">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <span class="series-tag ${tagClass}">${s.type}</span>
-            <span class="font-semibold text-sm">${s.label}</span>
-          </div>
-          <span class="text-xs text-gray-400">Rangs ${s.rankStart}–${s.rankEnd}</span>
-        </div>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">${desc}</p>
-        <table class="player-table">
-          <thead><tr>
-            <th class="w-10">#</th>
-            <th>Nom</th>
-            <th class="text-right">Points</th>
-          </tr></thead>
-          <tbody>
-            ${s.players.map(p => `
-              <tr>
-                <td class="text-gray-400 text-xs">${p.rank}</td>
-                <td class="font-medium">${p.name}</td>
-                <td class="text-right ${p.isDefault ? 'default-points' : ''}">
-                  ${p.points}${p.isDefault ? ' <span class="text-[10px]">(estimé)</span>' : ''}
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-    });
-
-    if (partition.excluded.length > 0) {
-        html += `
-      <div class="p-3 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
-        <div class="flex items-center gap-2 mb-2">
-          <svg class="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-          <span class="font-semibold text-sm text-red-600 dark:text-red-400">Joueurs exclus (${partition.excluded.length})</span>
-        </div>
-        ${partition.excluded.map(p => {
-            let reasonText = "";
-            // Check global dept input for rendering reason visually
-            const targetDept = document.getElementById('global-dept-input')?.value.trim() || '44';
-            const isHorsDept = targetDept && p.sigle && !p.sigle.endsWith(targetDept);
-
-            if (isHorsDept) {
-                reasonText = ` <span class="opacity-70">(Hors ${targetDept} - ${p.sigle})</span>`;
-            } else {
-                const dStr = p.dateAdded ? new Date(p.dateAdded).toLocaleDateString('fr-FR') : '';
-                reasonText = ` <span class="opacity-70">(Inscrit le ${dStr})</span>`;
-            }
-
-            return `<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 player-excluded" title="CPPH: ${p.points}">${p.name}${reasonText}</span>`;
-        }).join('')}
-      </div>
-    `;
-    }
-
-    return html;
-}
-
-function renderPartitionSummary() {
-    // Deprecated for the dynamic version inside renderImportResults directly
-    return '';
-}
-
 // ══════════════════════════════════════════
 // Schedule Grid Rendering
 // ══════════════════════════════════════════
@@ -1033,6 +958,22 @@ export function restoreUI() {
         if (p.matchDuration) el('param-match-duration').value = p.matchDuration;
         if (p.warmup !== undefined) el('param-warmup').value = p.warmup;
         if (p.rest) el('param-rest').value = p.rest;
+
+        const cr = p.courtReduction;
+        const toggle = el('param-courts-reduction-enabled');
+        const fields = el('reduction-fields');
+        if (toggle && fields) {
+            if (cr) {
+                toggle.checked = true;
+                fields.classList.remove('opacity-40', 'pointer-events-none');
+                if (cr.reduceTo) el('param-courts-reduce').value = cr.reduceTo;
+                if (cr.fromRotation) el('param-courts-reduce-from').value = cr.fromRotation;
+                if (cr.untilRotation) el('param-courts-reduce-until').value = cr.untilRotation;
+            } else {
+                toggle.checked = false;
+                fields.classList.add('opacity-40', 'pointer-events-none');
+            }
+        }
     }
 
     // Restore import results

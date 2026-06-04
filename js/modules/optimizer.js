@@ -2,7 +2,7 @@
  * optimizer.js — Scenario generation and optimization for dynamic categories
  */
 
-import { findAlternativePartitions, buildSeries } from './partitioner.js';
+import { findAlternativePartitions, buildSeries, processPlayers } from './partitioner.js';
 import { buildSchedule } from './scheduler.js';
 
 export function generateScenarios(categories, params) {
@@ -94,9 +94,8 @@ function generateExclusionScenario(categories, params) {
 
         for (let ex = 1; ex <= 2; ex++) {
             const tryPlayers = cat.players.slice(0, numPlayers - ex);
-            const tryPart = buildSeries(tryPlayers); // New optimal partition for reduced N
+            const tryPart = processPlayers(tryPlayers, { mode: 'auto', forcedExcludedCount: 0 });
 
-            // If even removing players results in exclusions, probably not a good path
             if (tryPart.excluded.length > 0) continue;
 
             const copyCats = JSON.parse(JSON.stringify(categories));

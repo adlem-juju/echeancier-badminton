@@ -8,7 +8,7 @@ import { initStore, subscribe, getState } from './store.js';
 import { initImport } from './modules/import.js';
 import {
     initTabs, initTheme,
-    renderImportResults, initSchedulerActions,
+    renderImportResults, initSchedulerActions, initOptimizerActions,
     restoreUI
 } from './ui/render.js';
 
@@ -22,6 +22,7 @@ function init() {
     initTheme();
     initImport();
     initSchedulerActions();
+    initOptimizerActions();
 
     // 3. Subscribe to state changes for auto-rendering import results
     // Only re-render when categories actually change (not on every setParams/setState)
