@@ -332,7 +332,7 @@ export function buildSchedule(categories, params) {
     const courts = params.courts;
     const courtReduction = params.courtReduction || null;
     const MAX_IDLE = 2;      // Max rotations gap between rounds of a series
-    const MAX_RETRIES = 6;
+    const MAX_RETRIES = 20; // Try many orderings to maximise occupancy
 
     // Generate all matches for all series
     const allMatchesTemplate = [];
@@ -344,7 +344,17 @@ export function buildSchedule(categories, params) {
         });
     });
 
-    let bestResult = null;
+    let bestValidResult = null; // best fully-valid result, ranked by occupancy
+    let bestResult = null;      // fallback if no valid result found
+
+    // Deterministic pseudo-random hash (for attempt-based permutations)
+    const hashInt = (str, seed) => {
+        let h = (seed * 2654435761) >>> 0;
+        for (let i = 0; i < str.length; i++) {
+            h = (Math.imul(h ^ str.charCodeAt(i), 2246822519)) >>> 0;
+        }
+        return (h ^ (h >>> 16)) >>> 0;
+    };
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         // Deep-clone matches so _placed flags don't bleed between attempts
@@ -376,10 +386,53 @@ export function buildSchedule(categories, params) {
         const roundDoneAt = {}; // `${sid}_${round}` -> rotIdx completed
         const semiStartedAt = {}; // seriesId -> rotIdx when first demi placed
 
-        // Ordered category list (shifted by attempt to rotate starting point)
+        // ── DIVERSIFIED ORDERING STRATEGY ──────────────────────────────────────
+        // Each attempt uses a genuinely different category ordering so the retry
+        // loop explores the scheduling space instead of repeating the same result.
         const catNames = Object.keys(categories).sort();
-        const catShift = attempt % Math.max(1, catNames.length);
-        const baseDisciplineOrder = [...catNames.slice(catShift), ...catNames.slice(0, catShift)];
+        const numCats = Math.max(1, catNames.length);
+        let orderedCats;
+
+        if (attempt < numCats) {
+            // Strategy A: forward cyclic rotation of sorted names
+            orderedCats = [...catNames.slice(attempt), ...catNames.slice(0, attempt)];
+        } else if (attempt < numCats * 2) {
+            // Strategy B: reverse cyclic rotation
+            const shift = attempt - numCats;
+            const rev = [...catNames].reverse();
+            orderedCats = [...rev.slice(shift), ...rev.slice(0, shift)];
+        } else if (attempt === numCats * 2) {
+            // Strategy C: T8-heavy categories first (pool fills courts early)
+            orderedCats = [...catNames].sort((a, b) => {
+                const aT8 = (categories[a]?.partition?.series || []).filter(s => s.type === 'T8').length;
+                const bT8 = (categories[b]?.partition?.series || []).filter(s => s.type === 'T8').length;
+                return bT8 - aT8;
+            });
+        } else if (attempt === numCats * 2 + 1) {
+            // Strategy D: PU6/PU5-first (fills courts around T8 finals)
+            orderedCats = [...catNames].sort((a, b) => {
+                const aT8 = (categories[a]?.partition?.series || []).filter(s => s.type === 'T8').length;
+                const bT8 = (categories[b]?.partition?.series || []).filter(s => s.type === 'T8').length;
+                return aT8 - bT8;
+            });
+        } else if (attempt === numCats * 2 + 2) {
+            // Strategy E: by total series count descending (busiest discipline first)
+            orderedCats = [...catNames].sort((a, b) => {
+                const aLen = (categories[a]?.partition?.series || []).length;
+                const bLen = (categories[b]?.partition?.series || []).length;
+                return bLen - aLen;
+            });
+        } else if (attempt === numCats * 2 + 3) {
+            // Strategy F: by total series count ascending
+            orderedCats = [...catNames].sort((a, b) => {
+                const aLen = (categories[a]?.partition?.series || []).length;
+                const bLen = (categories[b]?.partition?.series || []).length;
+                return aLen - bLen;
+            });
+        } else {
+            // Strategy G: pseudo-random permutation based on attempt seed
+            orderedCats = [...catNames].sort((a, b) => hashInt(a, attempt) - hashInt(b, attempt));
+        }
 
         // State for cross-rotation wraparound priority
         let wrapSeriesId = null; // series that started wrapping last rotation
@@ -476,9 +529,11 @@ export function buildSchedule(categories, params) {
                 }
             }
 
-            // Build discipline order for this rotation (normal round-robin, no wrap series inside)
-            const offset = rotIdx % Math.max(1, catNames.length);
-            let discOrder = [...catNames.slice(offset), ...catNames.slice(0, offset)];
+            // Build discipline order for this rotation.
+            // BUGFIX: cycle through orderedCats (not raw catNames) so each attempt
+            // actually produces a different per-rotation ordering.
+            const offset = rotIdx % numCats;
+            let discOrder = [...orderedCats.slice(offset), ...orderedCats.slice(0, offset)];
             if (wrapDiscipline && discOrder.includes(wrapDiscipline)) {
                 discOrder = [wrapDiscipline, ...discOrder.filter(d => d !== wrapDiscipline)];
             }
@@ -499,10 +554,21 @@ export function buildSchedule(categories, params) {
             for (const disc of discOrder) {
                 if (courtIdx >= activeCourts) break;
 
-                // Series order within discipline: wrap series first, urgent next, rest sorted
+                // Series order within discipline: wrap first, urgent next, then sort by
+                // remaining rounds desc (more behind = placed earlier to avoid starvation)
+                // then by idle gap desc (waited longer = higher priority).
                 let sidsForDisc = Object.keys(seriesProgress)
                     .filter(sid => seriesProgress[sid].discipline === disc)
-                    .sort();
+                    .sort((a, b) => {
+                        const spA = seriesProgress[a];
+                        const spB = seriesProgress[b];
+                        const remA = spA.maxRound - spA.nextRound;
+                        const remB = spB.maxRound - spB.nextRound;
+                        if (remB !== remA) return remB - remA; // more remaining → first
+                        const lastA = roundDoneAt[`${a}_${spA.nextRound - 1}`] ?? -999;
+                        const lastB = roundDoneAt[`${b}_${spB.nextRound - 1}`] ?? -999;
+                        return lastA - lastB; // waited longer → first
+                    });
                 if (wrapSeriesId && sidsForDisc.includes(wrapSeriesId)) {
                     sidsForDisc = [wrapSeriesId, ...sidsForDisc.filter(s => s !== wrapSeriesId)];
                 }
@@ -670,15 +736,25 @@ export function buildSchedule(categories, params) {
             violations: validation.violations,
         };
 
-        if (validation.valid) return result; // ✅ Perfect, return immediately
-        if (!bestResult || validation.violations.length < bestResult.violations.length) {
-            bestResult = result; // Keep the best attempt so far
+        // ── TRACK BEST BY OCCUPANCY (don't stop at first valid) ─────────────
+        if (validation.valid) {
+            if (!bestValidResult || result.metrics.occupancy > bestValidResult.metrics.occupancy) {
+                bestValidResult = result;
+                console.log(`Attempt ${attempt + 1}: valid ✅  occupancy=${result.metrics.occupancy}%`);
+            }
+            // Stop early only if we reach near-perfect occupancy
+            if (bestValidResult.metrics.occupancy >= 98) break;
+        } else {
+            if (!bestResult ||
+                validation.violations.length < bestResult.violations.length ||
+                (validation.violations.length === bestResult.violations.length &&
+                    result.metrics.occupancy > bestResult.metrics.occupancy)) {
+                bestResult = result;
+            }
+            console.warn(`Attempt ${attempt + 1}: ${validation.violations.length} violations, occupancy=${result.metrics.occupancy}%`);
         }
-
-        console.warn(`Attempt ${attempt + 1} failed validation (${validation.violations.length} violations). Retrying...`);
-        validation.violations.forEach(v => console.warn(' ↳', v));
     }
 
-    // Return best available result even if imperfect
-    return bestResult;
+    // Return the valid result with highest occupancy, or best invalid as fallback
+    return bestValidResult || bestResult;
 }
