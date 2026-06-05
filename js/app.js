@@ -22,7 +22,6 @@ function init() {
     initTheme();
     initImport();
     initSchedulerActions();
-    initOptimizerActions();
 
     // 3. Subscribe to state changes for auto-rendering import results
     // Only re-render when categories actually change (not on every setParams/setState)
@@ -41,6 +40,9 @@ function init() {
 
     // 4. Restore previous session
     restoreUI();
+
+    // 5. Optional tabs (safe to fail if HTML not present yet)
+    initOptimizerActions();
 
     console.log('%c🏸 BADM-Optimizer initialized', 'color: #17b37b; font-weight: bold; font-size: 14px;');
 }

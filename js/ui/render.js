@@ -866,6 +866,8 @@ export function initOptimizerActions() {
     const scenarioButtons = document.querySelectorAll('.scenario-card');
     const btnApply = document.getElementById('btn-apply-scenario');
 
+    if (!btnApply) return; // Optimizer tab not yet in HTML
+
     scenarioButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const scenarioKey = btn.id.replace('scenario-', '').toUpperCase();
