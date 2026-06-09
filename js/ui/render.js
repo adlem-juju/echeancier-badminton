@@ -136,6 +136,7 @@ export function renderImportResults() {
     renderOverviewTable(state, sortedCats);
     renderCategoryTabs(state, sortedCats);
     renderActiveCategoryDetail(state);
+    initPartitionNav();
 
     updateSchedulerChecklist(state, sortedCats);
     renderSchedulerFilters(state, sortedCats);
@@ -309,12 +310,14 @@ function renderActiveCategoryDetail(state) {
     const catName = state.activeCategoryTab;
     if (!catName || !state.categories[catName]) {
         container.innerHTML = '';
+        renderPartitionNav(state);
         return;
     }
 
     const cat = state.categories[catName];
     if (!cat || !cat.partition || !cat.partition.series) {
         container.innerHTML = '<p class="text-sm text-gray-400 italic col-span-3 text-center py-8">Aucune série disponible pour ce tableau.</p>';
+        renderPartitionNav(state);
         return;
     }
 
@@ -358,41 +361,104 @@ function renderActiveCategoryDetail(state) {
         `;
     });
 
-    const btnClass = cat.partition.validPartitionsCount > 1
-        ? 'border-brand-300 dark:border-brand-700 bg-brand-50 dark:bg-brand-900/30 hover:bg-brand-100 dark:hover:bg-brand-900/50 cursor-pointer text-brand-600 dark:text-brand-400 btn-cycle-partition'
-        : 'border-gray-200 dark:border-navy-700 bg-gray-50 dark:bg-navy-900/40 cursor-not-allowed opacity-60 text-gray-400';
-
-    html += `
-      <div class="card p-4 border border-dashed flex flex-col items-center justify-center h-full min-h-[200px] transition-colors ${btnClass}" data-cat="${catName}">
-         <svg class="w-8 h-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-           <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-         </svg>
-         <span class="text-xs font-semibold uppercase tracking-wider text-center">Autre combinaison</span>
-         <span class="text-[10px] mt-1 opacity-70">
-           ${(cat.partition.currentPartitionIndex || 0) + 1} / ${cat.partition.validPartitionsCount || 1} disponibles
-         </span>
-      </div>
-    `;
-
     container.innerHTML = html;
+    renderPartitionNav(state);
+}
 
-    // Attach event delegation if not already attached
-    if (!container.dataset.listenerAttached) {
-        container.dataset.listenerAttached = 'true';
-        container.addEventListener('click', (e) => {
-            const btn = e.target.closest('.btn-cycle-partition');
-            if (btn) {
-                const targetCat = btn.getAttribute('data-cat');
-                const currentState = getState();
-                const curCat = currentState.categories[targetCat];
-                if (curCat && curCat.partition && curCat.partition.validPartitionsCount > 1) {
-                    const nextIndex = (curCat.partition.currentPartitionIndex + 1) % curCat.partition.validPartitionsCount;
-                    // updateCategoryConfig is in the same file! We just need to trigger the update
-                    updateCategoryConfig(targetCat, { partitionIndex: nextIndex });
-                }
-            }
-        });
+const PARTITION_TYPES = ['t8', 'pu7', 'pu6', 'pu5', 'pu4'];
+const PARTITION_TYPE_LABELS = { t8: 'T8', pu7: 'PU7', pu6: 'PU6', pu5: 'PU5', pu4: 'PU4' };
+
+function renderPartitionNav(state) {
+    const catName = state.activeCategoryTab;
+    const nav = document.getElementById('partition-nav');
+    if (!nav) return;
+
+    const cat = catName && state.categories[catName];
+    if (!cat || !cat.partition) {
+        nav.style.display = 'none';
+        return;
     }
+
+    nav.style.display = 'flex';
+
+    // Type filter toggles
+    const allowedTypes = cat.config?.allowedTypes;
+    const isAllowed = (k) => !allowedTypes || allowedTypes.includes(k);
+    let filtersHtml = '<span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mr-1 self-center">Types :</span>';
+    for (const key of PARTITION_TYPES) {
+        const active = isAllowed(key);
+        const cls = active
+            ? 'bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 border-brand-300 dark:border-brand-600'
+            : 'bg-gray-50 dark:bg-navy-800 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-navy-700 opacity-60';
+        filtersHtml += `<button class="partition-type-toggle px-2 py-0.5 rounded border text-[10px] font-semibold transition-colors ${cls}" data-type="${key}" data-cat="${catName}">${PARTITION_TYPE_LABELS[key]}</button>`;
+    }
+    document.getElementById('partition-type-filters').innerHTML = filtersHtml;
+
+    // Constraint warning
+    const warning = document.getElementById('partition-constraint-warning');
+    warning.classList.toggle('hidden', !cat.partition.constraintViolated);
+
+    // Prev/Next controls
+    const total = cat.partition.validPartitionsCount || 1;
+    const currentIdx = cat.partition.currentPartitionIndex || 0;
+    const controls = document.getElementById('partition-nav-controls');
+    if (total <= 1) {
+        controls.style.display = 'none';
+    } else {
+        controls.style.display = 'flex';
+        document.getElementById('partition-nav-counter').textContent = `${currentIdx + 1} / ${total}`;
+        document.getElementById('btn-partition-prev').disabled = currentIdx === 0;
+        document.getElementById('btn-partition-next').disabled = currentIdx === total - 1;
+    }
+}
+
+function initPartitionNav() {
+    const nav = document.getElementById('partition-nav');
+    if (!nav || nav.dataset.listenerAttached) return;
+    nav.dataset.listenerAttached = 'true';
+
+    document.getElementById('btn-partition-prev').addEventListener('click', () => {
+        const state = getState();
+        const catName = state.activeCategoryTab;
+        const cat = state.categories[catName];
+        if (!cat?.partition) return;
+        const idx = cat.partition.currentPartitionIndex || 0;
+        if (idx > 0) updateCategoryConfig(catName, { partitionIndex: idx - 1 });
+    });
+
+    document.getElementById('btn-partition-next').addEventListener('click', () => {
+        const state = getState();
+        const catName = state.activeCategoryTab;
+        const cat = state.categories[catName];
+        if (!cat?.partition) return;
+        const idx = cat.partition.currentPartitionIndex || 0;
+        const total = cat.partition.validPartitionsCount || 1;
+        if (idx < total - 1) updateCategoryConfig(catName, { partitionIndex: idx + 1 });
+    });
+
+    // Type filter toggle — délégation sur le nav entier
+    nav.addEventListener('click', (e) => {
+        const btn = e.target.closest('.partition-type-toggle');
+        if (!btn) return;
+        const typeKey = btn.dataset.type;
+        const targetCat = btn.dataset.cat;
+        const state = getState();
+        const cat = state.categories[targetCat];
+        if (!cat) return;
+
+        const currentAllowed = cat.config?.allowedTypes || [...PARTITION_TYPES];
+        let newAllowed;
+        if (currentAllowed.includes(typeKey)) {
+            newAllowed = currentAllowed.filter(t => t !== typeKey);
+            if (newAllowed.length === 0) return; // refuser de tout désélectionner
+        } else {
+            newAllowed = [...currentAllowed, typeKey];
+        }
+        // Si tous les types sont sélectionnés → null (= aucune restriction)
+        if (newAllowed.length === PARTITION_TYPES.length) newAllowed = null;
+
+        updateCategoryConfig(targetCat, { allowedTypes: newAllowed, partitionIndex: 0 });
+    });
 }
 
 function updateSchedulerChecklist(state, sortedCats) {
@@ -748,6 +814,17 @@ export function initSchedulerActions() {
             const anyUnchecked = Array.from(checkboxes).some(cb => !cb.checked);
             checkboxes.forEach(cb => cb.checked = anyUnchecked);
             btnToggleAll.textContent = anyUnchecked ? 'Tout décocher' : 'Tout cocher';
+        });
+    }
+
+    const btnUncheckAll = document.getElementById('btn-uncheck-all-series');
+    if (btnUncheckAll) {
+        btnUncheckAll.addEventListener('click', () => {
+            document.querySelectorAll('.parent-cat-cb').forEach(cb => {
+                cb.checked = false;
+                cb.indeterminate = false;
+            });
+            document.querySelectorAll('.series-checkbox').forEach(cb => { cb.checked = false; });
         });
     }
 

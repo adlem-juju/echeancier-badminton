@@ -247,6 +247,22 @@
                 <div class="h-px bg-gray-200 dark:bg-navy-700 flex-1"></div>
               </div>
 
+              <!-- Navigation combinaisons -->
+              <div id="partition-nav" style="display:none" class="flex flex-col items-center gap-2 mb-4">
+                <!-- Type filters -->
+                <div class="flex items-center flex-wrap gap-1.5" id="partition-type-filters"></div>
+                <!-- Warning si contrainte impossible -->
+                <p id="partition-constraint-warning" class="hidden text-[10px] text-amber-600 dark:text-amber-400 italic">
+                  Aucune combinaison ne respecte les types sélectionnés — toutes les combinaisons sont affichées.
+                </p>
+                <!-- Prev / Next -->
+                <div id="partition-nav-controls" style="display:none" class="flex items-center justify-center gap-3">
+                  <button id="btn-partition-prev" class="px-3 py-1 rounded border border-gray-200 dark:border-navy-600 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">← Précédent</button>
+                  <span id="partition-nav-counter" class="text-[10px] text-gray-400 font-medium min-w-[4rem] text-center">1 / 1</span>
+                  <button id="btn-partition-next" class="px-3 py-1 rounded border border-gray-200 dark:border-navy-600 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Suivant →</button>
+                </div>
+              </div>
+
               <!-- Pill Tabs -->
               <div class="flex items-center flex-wrap gap-2 mb-6" id="category-tabs-container">
                 <!-- Filled by JS -->
@@ -335,7 +351,10 @@
 
           <!-- Tableaux à inclure -->
           <div class="pt-4 border-t border-gray-100 dark:border-navy-800">
-            <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Tableaux à inclure</h3>
+            <div class="flex items-center mb-3">
+              <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tableaux à inclure</h3>
+              <button id="btn-uncheck-all-series" class="ml-auto text-[10px] text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">Tout décocher</button>
+            </div>
             <div id="category-selector-container" class="space-y-1">
               <p class="text-xs text-gray-400 italic">En attente d'import</p>
             </div>

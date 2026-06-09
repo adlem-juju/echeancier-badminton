@@ -214,6 +214,21 @@ export function processPlayers(players, config = { targetDept: '44', mode: 'auto
         k = bestPartition.excluded;
     }
 
+    // Filter by allowed types
+    let constraintViolated = false;
+    if (config.allowedTypes && config.allowedTypes.length > 0) {
+        const allowed = new Set(config.allowedTypes);
+        const TYPE_KEYS = ['t8', 'pu7', 'pu6', 'pu5', 'pu4', 'pu3'];
+        const filtered = validPartitions.filter(p =>
+            TYPE_KEYS.every(k => !p[k] || allowed.has(k))
+        );
+        if (filtered.length > 0) {
+            validPartitions = filtered;
+        } else {
+            constraintViolated = true;
+        }
+    }
+
     const partitionIdx = (config.partitionIndex || 0) % Math.max(1, validPartitions.length);
     pResult = validPartitions[partitionIdx];
 
@@ -248,6 +263,7 @@ export function processPlayers(players, config = { targetDept: '44', mode: 'auto
     result.excluded = excluded;
     result.validPartitionsCount = validPartitions.length;
     result.currentPartitionIndex = partitionIdx;
+    result.constraintViolated = constraintViolated;
     return result;
 }
 
