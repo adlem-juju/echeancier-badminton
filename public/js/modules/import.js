@@ -5,6 +5,7 @@
 import { DEFAULT_POINTS, showToast } from '../utils.js';
 import { setState, getState } from '../store.js';
 import { processPlayers } from './partitioner.js';
+import { runFFBadScanAndRefine } from './ffbadScan.js';
 
 /**
  * Initialize the drag-and-drop zone and file input
@@ -50,7 +51,7 @@ function handleFile(file) {
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
@@ -69,6 +70,18 @@ function handleFile(file) {
             if (players.length === 0) {
                 showToast('Aucun joueur reconnu. Vérifiez les colonnes (Nom, Sexe, Points/CPPH).', 'error');
                 return;
+            }
+
+            if (getState().params.ffbadScanEnabled) {
+                try {
+                    const refined = await runFFBadScanAndRefine(players);
+                    if (refined > 0) {
+                        showToast(`${refined} poussin(s) affiné(s) via le scan FFBAD.`, 'success');
+                    }
+                } catch (err) {
+                    console.error('FFBAD scan error:', err);
+                    showToast('Scan FFBAD indisponible, valeurs par défaut conservées.', 'error');
+                }
             }
 
             // Group players by category
@@ -120,7 +133,7 @@ function handleFile(file) {
  */
 function parsePlayersFromArray(rows) {
     let headerIndex = -1;
-    let colMap = { name: -1, sex: -1, points: -1, category: -1 };
+    let colMap = { name: -1, sex: -1, points: -1, category: -1, licence: -1 };
 
     // 1. Find the header row
     for (let i = 0; i < Math.min(rows.length, 20); i++) {
@@ -145,6 +158,7 @@ function parsePlayersFromArray(rows) {
         // Look for Sigle (club/dept) and Date (registration)
         let sigleIdx = strRow.findIndex(c => c.includes('sigle') || c.includes('club'));
         let dateIdx = strRow.findIndex(c => c.includes('date'));
+        let licenceIdx = strRow.findIndex(c => c === 'licence' || c === 'license');
 
         // If we confidently find Name and Sex on this row, it's our header
         if (nameIdx !== -1 && sexIdx !== -1) {
@@ -163,6 +177,7 @@ function parsePlayersFromArray(rows) {
             colMap.category = categoryIdx;
             colMap.sigle = sigleIdx;
             colMap.date = dateIdx;
+            colMap.licence = licenceIdx;
             break;
         }
     }
@@ -216,6 +231,9 @@ function parsePlayersFromArray(rows) {
         // Sigle
         let sigle = colMap.sigle !== -1 ? String(row[colMap.sigle]).trim() : '';
 
+        // Licence (clé de correspondance avec le scan FFBAD)
+        let licence = colMap.licence !== -1 ? String(row[colMap.licence]).trim() : '';
+
         // Date (DD/MM/YYYY HH:MM:SS)
         let dateAdded = 0;
         if (colMap.date !== -1 && row[colMap.date]) {
@@ -244,6 +262,7 @@ function parsePlayersFromArray(rows) {
             rank: 0,
             category,
             sigle,
+            licence,
             dateAdded
         });
     }

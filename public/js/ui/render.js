@@ -8,6 +8,7 @@ import { buildSchedule } from '../modules/scheduler.js';
 import { generateScenarios } from '../modules/optimizer.js';
 import { exportToExcel } from '../modules/export.js';
 import { showToast } from '../utils.js';
+import { isScannedToday, scanFFBad, applyFFBadRefinement } from '../modules/ffbadScan.js';
 
 // ══════════════════════════════════════════
 // Universal Colors Dictionary
@@ -1078,4 +1079,69 @@ export function restoreUI() {
             document.getElementById('btn-export-xlsx').classList.remove('hidden');
         }
     }
+}
+
+// ══════════════════════════════════════════
+// FFBAD scan (raffinement de la cote des poussins)
+// ══════════════════════════════════════════
+
+/**
+ * Re-sorts and re-partitions every category after a point refinement
+ * (points changed, but category assignment doesn't) — reuses each
+ * category's existing config (dept/mode) instead of resetting it.
+ */
+function reprocessAllCategories() {
+    const state = getState();
+    Object.keys(state.categories).forEach(catName => {
+        updateCategoryConfig(catName, {}, false);
+    });
+    renderImportResults();
+}
+
+export function initFFBadScanUI() {
+    const checkbox = document.getElementById('ffbad-scan-checkbox');
+    const modal = document.getElementById('ffbad-scan-modal');
+    const btnConfirm = document.getElementById('ffbad-scan-modal-confirm');
+    const btnCancel = document.getElementById('ffbad-scan-modal-cancel');
+    if (!checkbox || !modal) return;
+
+    checkbox.checked = !!getState().params.ffbadScanEnabled;
+
+    checkbox.addEventListener('change', () => {
+        setParams({ ffbadScanEnabled: checkbox.checked });
+        if (!checkbox.checked) return;
+
+        const hasImport = getState().players && getState().players.length > 0;
+        if (!hasImport) return;
+
+        if (isScannedToday()) {
+            const refined = applyFFBadRefinement(getState().players);
+            showToast(refined > 0
+                ? `${refined} poussin(s) affiné(s) (scan du jour déjà disponible).`
+                : 'Scan du jour déjà disponible, aucun poussin concerné.', 'info');
+            if (refined > 0) reprocessAllCategories();
+            return;
+        }
+
+        modal.classList.remove('hidden');
+    });
+
+    btnCancel?.addEventListener('click', () => modal.classList.add('hidden'));
+
+    btnConfirm?.addEventListener('click', async () => {
+        modal.classList.add('hidden');
+        try {
+            // "Scanner maintenant" must always hit the network, never reuse
+            // a same-day cache — that's what the user explicitly asked for.
+            await scanFFBad();
+            const refined = applyFFBadRefinement(getState().players);
+            showToast(refined > 0
+                ? `${refined} poussin(s) affiné(s) via le scan FFBAD.`
+                : 'Scan FFBAD terminé, aucun poussin concerné.', 'success');
+            if (refined > 0) reprocessAllCategories();
+        } catch (err) {
+            console.error('FFBAD scan error:', err);
+            showToast('Scan FFBAD indisponible.', 'error');
+        }
+    });
 }

@@ -9,7 +9,7 @@ import { initImport } from './modules/import.js';
 import {
     initTabs, initTheme,
     renderImportResults, initSchedulerActions, initOptimizerActions,
-    restoreUI
+    restoreUI, initFFBadScanUI
 } from './ui/render.js';
 
 // ── Bootstrap ──
@@ -22,6 +22,7 @@ function init() {
     initTheme();
     initImport();
     initSchedulerActions();
+    initFFBadScanUI();
 
     // 3. Subscribe to state changes for auto-rendering import results
     // Only re-render when categories actually change (not on every setParams/setState)

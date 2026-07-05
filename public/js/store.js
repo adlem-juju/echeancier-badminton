@@ -12,6 +12,12 @@ const defaultState = {
   // Generated categories and partition results
   categories: {},      // e.g. { "SI MIN S6": { players: [], partition: { series, excluded } } }
 
+  // FFBAD "les tops" scan cache — refreshed at most 1x/jour (voir imports.md)
+  ffbadCotes: {
+    scannedAt: null,   // ISO timestamp of the last successful scan
+    cotes: {},         // { [licence]: cote } for Poussins found on myffbad.fr
+  },
+
   // Schedule parameters
   params: {
     startTime: '08:00',
@@ -20,6 +26,7 @@ const defaultState = {
     warmup: 3,
     rest: 20,
     courtReduction: null, // { reduceTo, fromRotation, untilRotation } or null
+    ffbadScanEnabled: false,
   },
 
   // Generated schedules
@@ -50,6 +57,7 @@ export function initStore() {
       // Merge nested objects
       _state.params = { ...defaultState.params, ..._state.params };
       _state.schedules = { ...defaultState.schedules, ..._state.schedules };
+      _state.ffbadCotes = { ...defaultState.ffbadCotes, ..._state.ffbadCotes };
     } catch (e) {
       console.warn('Invalid saved state, resetting.', e);
       _state = { ...defaultState };
